@@ -1,0 +1,3 @@
+- Three main components of a programming language
+- Deep embedding
+- Shallow embedding
