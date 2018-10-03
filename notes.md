@@ -47,8 +47,8 @@ We use denotational brackets to ascribe a semantics:
 We can model this using a deep embedding in Haskell with the following code:
 
 ```
-> data Expr = Var Int
->           | Add Expr Expr
+data Expr = Var Int
+          | Add Expr Expr
 ```
 
 Concrete syntax for `3 + 5` is then given by:
@@ -63,9 +63,9 @@ representation.
 The semantics is given by an evaluation function:
 
 ```
-> eval :: Expr -> Int
-> eval (Var n)   = n
-> eval (Add x y) = eval x + eval y
+eval :: Expr -> Int
+eval (Var n)   = n
+eval (Add x y) = eval x + eval y
 ```
 
 Notice that instead of `[|3 + 5|]`, we can now write:
@@ -80,12 +80,12 @@ The shallow embedding is given directly by functions: (we will redefine `Expr`
 here)
 
 ```
-> type Expr = Int
-> var :: Int -> Expr
-> var n = n
->
-> add :: Expr -> Expr -> Expr
-> add x y = x + y
+type Expr = Int
+var :: Int -> Expr
+var n = n
+
+add :: Expr -> Expr -> Expr
+add x y = x + y
 ```
 
 Our example is now written as:
