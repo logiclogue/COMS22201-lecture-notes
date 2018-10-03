@@ -68,7 +68,7 @@ The semantics is given by an evaluation function:
 > eval (Add x y) = eval x + eval y
 ```
 
-Notice that instead of `[|3 + 5|]`, we can nor write:
+Notice that instead of `[|3 + 5|]`, we can now write:
 
 ```
 eval (Add (Var 3) (Var 5))
