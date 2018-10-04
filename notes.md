@@ -95,3 +95,88 @@ Our example is now written as:
 ```
 add (var 3) (var 5)
 ```
+
+# 2.1
+
+A compiler is code that transforms a source language to a target language
+through some intermediate representation.
+
+```
+          eval
+source ----------------> target
+    |                       ^
+    |---> intermediate  ----|
+ compile  representation     exec
+           (IR)
+```
+
+Typical examples of this diagram include the C compiler `gcc`, which takes a C
+source file and compiles this to assembly. That assembly is then executed in the
+terminal.
+
+JavaScript tends to ignore the compile stage since it is an interpreted
+language. The web browser performs eval, which turns JS into rendered output.
+
+Haskell has two modes. When using `ghc`, it compiles `.hs` files into assembly
+which can then be executed in the terminal. However, when using `ghci` it takes
+source and interprets it directly by evaluating in the terminal.
+
+## Case Study : Circuit Language
+
+[Read: "Folding Domain-Specific Languages" by Gibbons & Wu]
+
+The circuit language is a DSL for describing circuits. It consists of several
+operations:
+
+- `identity :: Int -> Circuit`
+    - e.g. `identity 3 = | | |` } 3
+- `beside :: Circuit -> Circuit -> Circuit`
+    - e.g. `beside (| | |) (| |) = | | | | |`
+    - `beside (|\|) (| |\|) = |\| | |\|`
+- `above :: Circuit -> Circuit -> Circuit`
+    - e.g. `above (|\| |) (| |\|) = |\| |`
+    - `                             | |\|`
+    - This assumes that the width of the two circuits are equal
+    - This assumes that the width of the two circuits are equal
+- `fan :: Int -> Circuit`
+    - e.g. `fan 4 = (|\|-|-|)`
+    - `fan 6 = (|\|-|-|-|-|)`
+- `stretch :: [Int] -> Circuit -> Circuit`
+    - e.g. `stretch [1, 2, 3, 2, 2] (|\| |\|-|)`
+    - `= |-|\| | | |-|\|-|\|`
+    - e.g. `stretch [3, 2, 4] (|-|\|)`
+    - `= | | |-|\|-|-|-|\|`
+
+This language is used to describe how circuits work. Information starts at the
+top of each line and flows downwards.
+
+Information is combined by joining lines, and applying the operation `(*)` "blob"!
+
+e.g. `y = x[0] * x[1] * x[2]`
+
+Information is duplicated when lines separate.
+
+e.g. `x = y[0] = y[1] = y[2]`
+
+## Deep Embedding
+
+There are many different ways of interpreting this circuit language.
+
+e.g.
+    - Find the width of circuit
+    - Find the height of circuit
+    - Evaluate the output of circuit given input and `(*)`
+
+We will start with a deep embedding. This is achieved in two steps:
+
+- Create a data structure for the abstract syntax
+- Define a semantics with an evaluation function
+
+```
+> data Circuit
+>     = Identity Int
+>     | Beside Circuit Circuit
+>     | Above Circuit Circuit
+>     | Fan Int
+>     | Stretch [Int] Circuit
+```

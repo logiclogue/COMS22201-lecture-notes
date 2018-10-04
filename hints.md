@@ -1,3 +1,10 @@
 - Three main components of a programming language
 - Deep embedding
 - Shallow embedding
+- Circuit language
+    - `identity`
+    - `beside`
+    - `above`
+    - `fan`
+    - `stretch`
+    - Deep embedding
