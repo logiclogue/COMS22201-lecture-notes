@@ -4,19 +4,21 @@
   Hoare
 
 A programming language consists of three main components. They are:
-    - Syntax - the shape of grammar/words/vocab
-    - Semantics - the meaning, a function from syntax to some domain
-    - Pragmatics - the purpose of a language
+
+- Syntax - the shape of grammar/words/vocab
+- Semantics - the meaning, a function from syntax to some domain
+- Pragmatics - the purpose of a language
 
 A domain specific language (DSL) is a language that has been crafted with a
 specific purpose in mind. They are not necessarily Turing-complete.
 
 Some DSLs come equipped with all the features of general purpose languages:
-    - Parser
-    - Syntax-highlighting
-    - IDEs
-    - Compiler
-    - Documentation
+
+- Parser
+- Syntax-highlighting
+- IDEs
+- Compiler
+- Documentation
 
 An embedded domain-specific language (EDSL) is defined within another (host)
 language. The advantage is that there is less word to perform. This is at the
