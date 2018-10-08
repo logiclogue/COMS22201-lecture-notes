@@ -184,3 +184,91 @@ We will start with a deep embedding. This is achieved in two steps:
 >     | Fan Int
 >     | Stretch [Int] Circuit
 ```
+
+# 08/10/2018
+
+"Perfection is achieved, not when there is nothing more to add, but when there
+is nothing left to take away" - Antoine de Saint-Exupery
+
+We can interpret the circuit language by stipulating that the semantics of a
+term is the width of the circuit generated.
+
+```
+> type Width = Int
+> width :: Circuit -> Width
+> width (Identity n)   = n
+> width (Beside c1 c2) = width c1 + width c2
+> width (Above c1 c2)  = width c1 -- Choice of semantics here!
+> width (Fan n)        = n
+> width (Stretch ws c) = sum ws
+```
+
+We can give *multiple semantics* easily by supplying more evaluation functions.
+
+For instance the height of the circuit is:
+
+```
+> type Height = Int
+> height :: Circuit -> Height
+> height (Identity n) = 1
+> ;
+> height (Above c1 c2) = height c1 + height c2
+```
+
+Sometimes the semantics are intertwined in a dependent way. For instance,
+calculating if a circuit is well connected requires us to calculate the width
+even though all we are interested in is a `Bool`.
+
+```
+> type Connected = Bool
+```
+
+But for this we need the width as well, we can use the `width` function for
+this.
+
+```
+> connected :: Circuit -> Connected
+> connected (Identity n)   = True
+> connected (Beside c1 c2) = connected c1 && connected c2
+> connected (Above c1 c2)  = connected c1 && connected c2
+>     && width c1 == width c2
+> connected (Fan n)        = True
+> connected (Stretch ws c) = connected c && width c == length ws
+>     && ((not . elem 0) ws)
+```
+
+## Shallow Embedding
+
+In a shallow embedding we simply have to give a semantics in terms of the
+operations directly.
+
+```
+type Width = Int
+
+type Circuit = Width
+
+identity :: Int -> Circuit -- NB the type synonyms make this an Int.
+identity n = n
+
+beside :: Circuit -> Circuit -> Circuit
+beside c1 c2 = c1 + c2
+
+above :: Circuit -> Circuit -> Circuit
+above c1 c2 = c1
+
+fan :: Int -> Circuit
+fan n = n
+
+stretch :: [Int] -> Circuit -> Circuit
+stretch ws c = sum ws
+```
+
+Shallow is problematic because it is hard to add a different semantics. In order
+to do so, we must redefine `Circuit`, but this might break any code that depends
+on the old definition. Additionally, a dependent semantics requires all of the
+interpretations to be considered at once. This is not compositional.
+
+However in a shallow semantics it is easy to extend the language with new
+operations since this involves adding new functions: nothing breaks. With a deep
+embedding a new constructor must be added so all semantics must be extended
+accordingly.
