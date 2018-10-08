@@ -8,3 +8,8 @@
     - `fan`
     - `stretch`
     - Deep embedding
+
+- Deep embedding multiple interpretations/semantics
+- Shallow embedding multiple interpretations/semantics
+    - Problems with this
+    - Advantages of this
