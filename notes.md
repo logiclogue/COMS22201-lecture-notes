@@ -263,3 +263,106 @@ However in a shallow semantics it is easy to extend the language with new
 operations since this involves adding new functions: nothing breaks. With a deep
 embedding a new constructor must be added so all semantics must be extended
 accordingly.
+
+# The Expression Problem
+
+The expression problem concerns itself with finding a solution to the following:
+
+- Is it possible to extend the syntax and semantics of a language in a modular
+  fashion.
+
+For instance, consider the data type `Expr` from before:
+
+```
+data Expr = Val Int | Add Expr Expr
+```
+
+Here we want to extend the syntax by adding a new operation for multiplication,
+but we do not want to modify any existing code. I.e. we cannot simply add a new
+`Mul` constructor.
+
+Similarly consider the semantics:
+
+```
+eval :: Expr -> Int
+```
+
+Again we want to extend the semantics without modifying the code.
+
+(In this case, adding semantics is easy because we simply write another
+function of type `Expr -> b`).
+
+To solve the expression problem we will study the generalisation of folds called
+a catamorphism. We do this because folds are a way of reducing data structures
+in a composable way, and syntax trees are just data structures.
+
+# Catamorphisms
+
+Consider the fold for a list.
+
+```
+> data [a] = []
+>          | a : [a]
+
+> foldr :: b -> (a -> b -> b) -> [a] -> b
+> foldr k f []     = k
+> foldr k f (x:xs) = f x (foldr k f xs)
+```
+
+So the first step is to deconstruct the type of lists to expose its generic
+structure.
+
+The definition of lists is the same as the following where we remove the
+syntactic sugar:
+
+```
+> data List a = Empty
+>             | Cons a (List a)
+```
+
+We remove recursion from this datatype, and mark it with a parameter `k` for
+`k`ontinuation.
+
+```
+> data ListF a k = EmptyF
+>                | ConsF a k -- This shows us where List a was recursive
+```
+
+We now make the recursive parameter something we can change programatically by
+giving a functor instance to `ListF a`
+
+```
+> instance Functor (ListF a) where
+>     fmap :: (x -> y) -> ListF a x -> ListF a y
+```
+
+We now need to define a type that gives us the fixed point of data. This is
+defined as follows:
+
+```
+> data Fix f = In (f (Fix f))
+```
+
+This datatype allows us to generalise all recursive datatypes (except neutrally
+recursive).
+
+For example, instead of `List a`, we can write `Fix (ListF a)`. To demonstrate
+this, we show that `List a` and `Fix (ListF a)` are isomorphic:
+
+```
+> toList   :: Fix (ListF a) -> List a
+> fromLIst :: List a -> Fix (ListF a)
+```
+
+We say that `List a` and `Fix (ListF a)` are isomorphic when:
+
+`(toList . fromList) = id` and `(fromList . toList) = id`.
+
+In other notation we write: `List a =~ Fix (ListF a)`
+
+Let's define these functions:
+
+```
+fromList :: List a -> Fix (ListF a)
+fromList Empty = In EmptyF
+```

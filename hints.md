@@ -13,3 +13,12 @@
 - Shallow embedding multiple interpretations/semantics
     - Problems with this
     - Advantages of this
+
+- Expression problem
+    - Extend syntax and semantics in a modular fashion
+- Catamorphism
+- `ListF`
+    - Functor instance
+- `Fix`
+- `toList`
+- `fromList`
