@@ -351,7 +351,7 @@ this, we show that `List a` and `Fix (ListF a)` are isomorphic:
 
 ```
 > toList   :: Fix (ListF a) -> List a
-> fromLIst :: List a -> Fix (ListF a)
+> fromList :: List a -> Fix (ListF a)
 ```
 
 We say that `List a` and `Fix (ListF a)` are isomorphic when:
@@ -365,4 +365,120 @@ Let's define these functions:
 ```
 fromList :: List a -> Fix (ListF a)
 fromList Empty = In EmptyF
+```
+
+Some examples of values of type `Fix (ListF a)` are:
+
+```
+In EmptyF :: Fix (ListF a) -- This works because EmptyF :: ListF a k for any a
+                           -- or k
+    -- ListF a (Fix (ListF a))
+```
+
+Note that the type of `In` is:
+
+```
+In :: f (Fix f) -> Fix f
+```
+
+So the example above is where `f = ListF a`
+
+```
+In (ConsF 5 (In EmptyF))
+            -- Fix (ListF a)
+-- Fix (ListF a)
+```
+
+Fix two elements we have:
+
+```
+In (ConsF 6 (In (ConsF 7 (In EmptyF))))
+```
+
+So now we have enough to finish a definition of `fromList`:
+
+```
+> fromList :: List a -> Fix (ListF a)
+> fromList Empty       = In EmptyF
+> fromList (Cons x xs) = In (ConsF x (fromList xs))
+                 -- a
+                   -- List a
+```
+
+We are now ready to generalise fold to be a catamorphism:
+
+Consider functions off type `ListF a b -> b`
+
+```
+h :: ListF a b -> b
+h EmptyF      = k
+h (ConsF a y) = f a y
+    where
+        k :: b
+        f :: a -> b -> b
+```
+
+Functions of that type correspond to replacing the constructors of `ListF a`
+with functions `k` and `f` just like in `foldr`.
+
+A catamorphism arises from this diagram:
+
+```
+           fmap (cata alg)
+        f (Fix f) ------> f b 
+     In | ^ inop           | alg
+        v |                v
+      Fix f -------------> b
+               cata alg
+```
+
+The function `inop` is the opposite of `In`. We definite it by the following:
+
+```
+> inop :: Fix f -> f (Fix f)
+> inop (In x) = x
+           -- f (Fix f)
+```
+
+So finally we can write the function `cata` by chasing the arrows of this
+square.
+
+```
+> cata :: Functor f => (f b -> b) -> Fix f -> b
+> cata alg x = (alg . fmap (cata alg) . inop) x
+```
+
+An alternative and equivalent definition is:
+
+```
+> cata :: Functor f => (f b -> b) -> Fix f -> b
+> cata alg (In x) = alg (fmap (cata alg) x)
+```
+
+To use this, we only need to supply the `alg`.
+
+We will define the function `toList` using a `cata`:
+
+```
+> toList :: Fix (ListF a) -> List a
+> toList = cata alg
+>     where
+>         alg :: ListF a (List a) -> List a
+>         alg EmptyF       = Empty
+>         alg (ConsF x xs) = Cons x xs
+                     -- a
+                       -- List a
+```
+
+Here is another function:
+
+```
+> toList' :: Fix (ListF a) -> [a]
+> toList' = cata alg
+>     where
+>         alg :: ListF a [a] -> [a]
+>         alg EmptyF       = []
+>         alg (ConsF x xs) = x:xs
+                     -- a
+                       -- [a]
 ```

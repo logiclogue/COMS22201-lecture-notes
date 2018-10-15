@@ -22,3 +22,6 @@
 - `Fix`
 - `toList`
 - `fromList`
+- Algebra
+- Catamorphism diagram
+- `cata`
