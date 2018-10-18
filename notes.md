@@ -332,8 +332,10 @@ We now make the recursive parameter something we can change programatically by
 giving a functor instance to `ListF a`
 
 ```
-> instance Functor (ListF a) where
->     fmap :: (x -> y) -> ListF a x -> ListF a y
+instance Functor (ListF a) where
+    fmap :: (x -> y) -> ListF a x -> ListF a y
+    fmap f EmptyF      = EmptyF
+    fmap f (ConsF a x) = ConsF a (f x)
 ```
 
 We now need to define a type that gives us the fixed point of data. This is
@@ -481,4 +483,102 @@ Here is another function:
 >         alg (ConsF x xs) = x:xs
                      -- a
                        -- [a]
+```
+
+We can also define a function that returns the length of a `Fix (ListF a)`:
+
+```
+> length :: Fix (ListF a) -> Int
+> length = cata alg where
+>     alg :: ListF a Int -> Int
+>     alg EmptyF      = 0
+>     alg (ConsF x y) = 1 + y
+                   -- Int
+```
+
+Here is an example of evaluation:
+
+```
+length (In (ConsF 7 (In (ConsF 9 (In EmptyF)))))
+= {length}
+cata alg (In (ConsF 7 (In (ConsF 9 (In EmptyF)))))
+= {cata}
+alg (fmap (cata alg) (ConsF 7 (In (ConsF 9 (In EmptyF)))))
+= {fmap}
+alg (ConsF 7 (cata alg (In (ConsF 9 (In EmptyF)))))
+= {alg}
+1 + cata alg (In (ConsF 9 (In EmptyF)))
+= {cata}
+1 + alg (fmap (cata alg) (ConsF 9 (In EmptyF)))
+= {fmap}
+1 + alg (ConsF 9 (cata alg (In EmptyF)))
+= {alg}
+1 + 1 + cata alg (In EmptyF)
+= {cata}
+1 + 1 + alg (fmap (cata alg) EmptyF)
+= {fmap}
+1 + 1 + alg EmptyF
+= {alg}
+1 + 1 + 0
+= {(+)}
+2
+```
+
+Now another example, of summing a list:
+
+```
+> sum :: Fix (ListF Int) -> Int
+> sum = cata alg where
+>     alg :: ListF Int Int -> Int
+>     alg EmptyF      = 0
+>     alg (ConsF x y) = x + y
+                   -- Int
+```
+
+# Peano Numbers
+
+A peano number is either zero, or the successor of another peano number.
+
+```
+> data Peano = Z
+>            | S Peano
+```
+
+So the number 3 is written `S (S (S Z))`
+
+* Step 1. Make a signature functor for `Peano`.
+
+```
+> data PeanoF k = Z
+>               | S k -- we identified the recursive call in Peano
+```
+
+* Step 2. Define a functor instance for `PeanoF`.
+
+```
+> instance Functor Peano where
+>     fmap :: (a -> b) -> Peano a -> Peano b
+>     fmap f Z     = Z
+>     fmap f (S x) = S (f x)
+```
+
+* Step 3. Profit, write functions using `cata`.
+
+```
+toInt :: Fix PeanoF -> Int
+toInt = cata alg where
+    alg :: PeanoF Int -> Int
+    alg Z     = 0
+    alg (S x) = 1 + x
+```
+
+Now we can define a doubling function:
+
+```
+> double :: Fix PeanoF -> Fix PeanoF
+> double = cata alg
+>     alg :: PeanoF -> Fix Peano
+>     alg Z     = In Z
+>     alg (S x) = In (S (In (S x))) -- We have doubled the number of S
+             -- Fix PeanoF
 ```

@@ -25,3 +25,9 @@
 - Algebra
 - Catamorphism diagram
 - `cata`
+
+- `Functor` instance for `ListF`
+- Peano numbers
+- `PeanoF` definition
+- `Functor` instance for `PeanoF`
+- `toInt` for `PeanoF`
