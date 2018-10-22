@@ -602,3 +602,152 @@ Now we can define a doubling function:
 >     alg (S x) = In (S (In (S x))) -- We have doubled the number of S
              -- Fix PeanoF
 ```
+
+# 22/10/2018
+
+# Composing Languages
+
+Previously, we looked at the following datatype as the language for addition:
+
+```
+> data Expr = Val Int
+>           | Add Expr Expr
+```
+
+We learnt to extract the signature functor for this by locating recursive calls.
+
+```
+> data ExprF k = ValF Int
+>              | AddF k k
+```
+
+The `Fix ExprF` datatype is essentially `Expr`:
+
+```
+Fix ExprF = Expr
+```
+
+Suppose we want to add multiplication to this language, we need a way to extend
+`ExprF` with more constructors. This is achieved by the coproduct of functors.
+
+The coproduct functor is defined as:
+
+```
+> data (f :+: g) a = L (f a)
+>                  | R (g a)
+```
+
+This takes two functors `f` and `g` and makes the functor `(f :+: g)`. It
+introduces these constructors:
+
+```
+L :: f a -> (f :+: g) a
+R :: g a -> (f :+: g) a
+```
+
+The `Functor` instance is defined as follows:
+
+```
+> instance (Functor f, Functor g) => Functor (f :+: g) where
+>     fmap :: (a -> b) -> (f :+: g) a -> (f :+: g) b
+>     fmap f (L x) = L (fmap f x)
+           -- a -> b   ---------- f b
+                -- f a
+>     fmap f (R y) = R (fmap f y)
+                -- g a ---------- g b
+```
+
+Now we are ready to define the signature functor for multiplication:
+
+```
+> data MulF k = MulF k k
+```
+
+This introduces the datatype constructor:
+
+```
+MulF :: k -> k -> MulF k
+```
+
+We define its `Functor` instance:
+
+```
+> instance Functor MulF where
+>     fmap f (MulF x y) = MulF (f x) (f y)
+```
+
+Finally, we can put the `ExprF` and `MulF` languages together to have a language
+with both addition and multiplication:
+
+```
+Fix (ExprF :+: MulF)
+```
+
+This is essentially the same as describing the following datatype, but in a
+compositional way:
+
+```
+> data Expr' = Val' Int         --
+>            | Add' Expr' Expr' -- from ExprF
+>            | Mul' Expr' Expr' -- from MulF
+```
+
+For practical purposes, we do not work with `Expr'`, but with `Fix (ExprF :+:
+MulF)`.
+
+We need to write algebras of the form:
+
+```
+ExprF :+: MulF b -> b
+```
+
+to reduce a `Fix (ExprF :+: MulF)` tree to a `b`.
+
+To do this in a compositional way, we define a way of combining `ExprF` algebras
+and `MulF` algebras: we call this the *junction* of algebras:
+
+```
+> (\/) :: (f a -> a) -> (g a -> a) -> ((f :+: g) a -> a)
+> (falg \/ galg) (L x) = falg x
+   ---- f a -> a    -- f a
+                 ----- f :+: g a
+           ---- g a -> a ------ a
+> (falg \/ galg) (R y) = falg y
+                    -- g a
+```
+
+So now we can give a semantics to the language `Fix (ExprF :+: MulF)` by
+defining algebras.
+
+```
+> add :: ExprF Int -> Int
+> add (ValF x)   = x
+> add (AddF x y) = x + y
+```
+
+```
+> mul :: MulF Int -> Int
+> mul (MulF x y) = x * y
+```
+
+To evaluation, we write
+
+```
+> eval :: Fix (ExprF :+: MulF) -> Int
+> eval = cata (add \/ mul)
+```
+
+Hurrah, we have solved the expression problem!
+
+In fact, we can decompose the `ExprF` into constituent parts:
+
+```
+> data ValF k = ValF Int
+> data AddF k = AddF k k
+```
+
+After defining `Functor` instances, we can define algebras for:
+
+```
+Fix (ValF :+: AddF :+: MulF)
+```
