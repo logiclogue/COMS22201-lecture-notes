@@ -31,3 +31,11 @@
 - `PeanoF` definition
 - `Functor` instance for `PeanoF`
 - `toInt` for `PeanoF`
+
+# Composing languages
+
+- Coproduct of functors
+- `MulF`
+- Creating languages with both `ExprF` and `MulF` using `(:+:)`
+- Junction of algebras with `\/`
+- Solving the expression problem!
