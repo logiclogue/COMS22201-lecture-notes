@@ -39,3 +39,9 @@
 - Creating languages with both `ExprF` and `MulF` using `(:+:)`
 - Junction of algebras with `\/`
 - Solving the expression problem!
+
+# Parsers
+
+- Backus-Naur Form (BNF)
+- BNF extended
+- Paull's modified algorithm

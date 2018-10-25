@@ -729,3 +729,112 @@ After defining `Functor` instances, we can define algebras for:
 ```
 Fix (ValF :+: AddF :+: MulF)
 ```
+
+# Parsers
+
+A parser of things is a function of strings
+To lists of pairs of things and strings
+    - Graham Hutton
+
+# Backus-Naur Form
+
+Backus-Naur Form (BNF) is a language used to express the shape of grammars. It
+was invented in around 1958 for the expression of the Algol programming
+language.
+
+A BNF statement is made up of:
+
+```
+ε     represents empty strings
+<n>   represents a non-terminal
+"x"   represents a terminal
+p | q represents the choice between p, q.
+```
+
+An example of BNF is the following:
+
+```
+<digit> ::= "0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"
+        -- "is defined to be".
+```
+
+We can approximate numbers by this:
+
+```
+<num> ::= <digit>
+        | <digit><number>
+```
+
+The core language of BNF is usually extended with some constructs:
+
+```
+[e]  optional e
+(e)  grouping e
+e*   0 or more repetitions of e
+e+   1 or more repetitions of e
+```
+
+For a more complex example, consider expressions:
+
+```
+<expr> ::= <num>
+         | <num>"+"<expr>
+```
+
+This corresponds to the following type:
+
+```
+> data Expr = Val Num
+>           | Add Num Expr
+```
+
+In principle, we do the same to convert `<num>` into a `Num` datatype. However,
+we will approximate this by the type `Int`.
+
+```
+> type Num = Int
+```
+
+Grammars can sometimes be ambiguous: a single string can be accepted by the
+grammar in multiple ways:
+
+```
+<expr> ::= <num>
+         | <expr>"+"<expr>
+```
+
+The problem here is also that `<expr>` is left-recursive: there is branch which
+has an `<expr>` before any terminal.
+
+This causes problems in recursive-descent parsers, which we will study later.
+
+The solution is to refactor the grammar.
+
+# Paull's Modified Algorithm
+
+We can remove recursion as follows. Suppose we have the following grammar:
+
+```
+A ::= Aα₁|...|Aαn|β₁|...|βm
+```
+
+Where `A` is a non-terminal and `αi`, `βj` are BNF expressions.
+
+To apply the algorithm, we rewrite the term above to be the following:
+
+```
+A  ::= β₁A'|...|βmA'α
+A' ::= α₁A'|...|αnA'|ε
+```
+
+In practice here is how we convert the following:
+
+```
+           ----- β
+<expr> ::= <num>
+         | <expr>"+"<expr>
+    |      --- A --------- α
+    v
+<expr>  ::= <num><expr'>
+<expr'> ::= "+"<expr><expr'>|ε
+```
