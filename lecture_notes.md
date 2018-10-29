@@ -862,3 +862,144 @@ In practice have is how we convert the following:
 <expr>  ::= <num><expr'>
 <expr'> ::= "+"<expr><expr'>|ε
 ```
+
+# 29/10/2018
+
+# Parsers
+
+A parser is a function that takes in a list of characters, and returns an item
+that was parsed, along with the unconsumed string.
+
+We can define it by:
+
+```
+> newtype Parser a = Parser (String -> [(a, String)])
+```
+
+We can use a parser by defining a function `parse`:
+
+```
+> parse :: Parser a -> String -> [(a, String)]
+> parse (Parser px) = px
+                -- String -> [(a, String)]
+```
+
+Now we define combinators that allow us to build parsers:
+
+```
+> fail :: Parser a
+> fail = Parser (\ts -> [])
+```
+
+This parser always fails to parse:
+
+```
+parse (fail) "Hello" = []
+```
+
+```
+> item :: Parser Char
+> item = Parser (\ts -> case ts of
+>       []      -> []
+>       (t:ts') -> [(t, ts')])
+                   ---------- [(Char, String)]
+```
+
+Here we have:
+
+```
+parse (item) "Hello" = [('H', "ello")]
+```
+
+Sometimes it is useful to look at the input stream without consuming anything:
+
+```
+> look :: Parser String
+> look = Parser (\ts = [(ts, ts)])
+```
+
+```
+parse (look) "Hello" = [("Hello", "Hello")]
+```
+
+Often, we want to transform our parsers from producing values of one type to
+another.
+
+For instance we might transform a parser for a single `Char` into producing the
+corresponding `Int`.
+
+This is achieved by giving a functor instance for parsers:
+
+```
+> instance Functor Parser where
+>     --fmap :: (a -> b) -> Parser a -> Parser b
+>     fmap f (Parser px) =
+                     -- String -> [(a, String)]
+>         Parser (\ts -> [(f x, ts')
+>                        | (x, ts') <- px ts])
+```
+
+Here is a diagram of what is happening:
+
+```
+|-------------------------------| ts
+--------- |---------------------| ts'
+    x
+    |
+    v
+   f x
+```
+
+We can use this to define a parser for `Int`s from our `item` parser.
+
+Now we introduce some combinators:
+
+```
+(<$>) :: (a -> b) -> Parser a -> Parser b
+
+f <$> px = fmap f px
+```
+
+The following variation is often useful:
+
+```
+(<$) :: a -> Parser b -> Parser a
+x <$ py = fmap (const x) py
+```
+
+We can use this to build a function called `skip` that parses input, but outputs
+nothing useful.
+
+```
+> skip :: Parser a -> Parser ()
+> skip px = () <$ px
+```
+
+Now we want to apply a function to the different outputs of the parse:
+
+```
+|------------------------------------------------------| ts
+----------------------- |------------------------------| ts'
+f :: (a -> b -> c -> d)  ------ |----------------------| ts''
+:                         x :: a ------ |--------------| ts'''
+:                                y :: b  ------ |------| ts''''
+:                                        z :: c :
+:-----------------------------------------------:
+            f x y z :: d
+```
+
+To make something like this we use a combination of `<*>` and `<$>` like this:
+
+```
+pf <*> px <*> py <*> pz
+```
+
+This uses the `(<*>)` operation, which we will define shortly.
+
+The `Applicative` class introduces pure and `(<*>)`:
+
+```
+> class Functor f => Applicative f where
+>     pure  :: a -> f a
+>     (<*>) :: f (a -> b) -> f a -> f b
+```
