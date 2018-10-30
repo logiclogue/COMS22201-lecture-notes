@@ -45,3 +45,12 @@
 - Backus-Naur Form (BNF)
 - BNF extended
 - Paull's modified algorithm
+- `Parser` defintion
+- `parse` function
+- `fail` parser
+- `look` parser
+- `Functor` instance for `Parser`
+- `(<$>)` operator
+- `(<$)` operator
+- `skip`
+- `(<*>)` operator
