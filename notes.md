@@ -977,3 +977,156 @@ The `Applicative` class introduces pure and `(<*>)`:
 >     pure  :: a -> f a
 >     (<*>) :: f (a -> b) -> f a -> f b
 ```
+
+These have the following definitions:
+
+```
+> instance Applicative Parser where
+>     --pure :: a -> Parser a
+>     pure x = Parser (\ts -> [(x, ts)])
+```
+
+The `pure x` parser will not consume any input, but always generate the value `x`.
+
+```
+parse (pure 5) "Hello" = [(5, "Hello")]
+```
+
+Now we define `<*>`, pronounced "ap" for "apply".
+
+```
+>     --(<*>) :: Parser (a -> b) -> Parser a -> Parser b
+>     Parser pf <*> Parser px = Parser (\ts -> 
+>                       [(f x, ts'')
+>                       | (f, ts')  <- pf ts
+>                       , (x, ts'') <- px ts'])
+```
+
+```
+|----------------------------------------------| ts
+:-------------:|-------------------------------| ts'
+:      f        :-------:|---------------------| ts''
+:                   x   :
+:-----------------------:
+           f x
+```
+
+The operation we defined first parses a function, then a value, and then applies
+the function to the value.
+
+This can be done the other way around:
+
+```
+> (<**>) :: Parser a -> Parser (a -> b) -> Parser b
+> Parser px <**> Parser pf = Parser (\ts -> 
+>               [(f x, ts'')
+>               | (x, ts')  <- px ts
+>               , (f, ts'') <- pf ts'])
+```
+
+```
+|--------------------------------| ts
+:------:|------------------------| ts'
+:  x    :---------:|-------------| ts''
+:            f     :
+:------------------:
+        f x
+```
+
+Other derived operators are `(<*)` and `(*>)`. Their types are:
+
+```
+> (<*) :: Parser a -> Parser b -> Parser a
+> (*>) :: Parser a -> Parser b -> Parser b
+```
+
+The `Monoidal` class is equivalent to `Applicative`:
+
+
+# Monoidal
+
+```
+> class Monoidal f where
+>     unit :: f ()
+>     mult :: f a -> f b -> f (a, b)
+```
+
+For parsers the `Monoidal` instance is as follows:
+
+```
+instance Monoidal Parser where
+    --unit :: Parser ()
+    unit = Parser (\ts -> [((), ts)])
+
+    --mult :: Parser a -> Parser b -> Parser (a, b)
+    mult (Parser px) (Parser py) = Parser (\ts ->
+                    [((x, y), ts'')
+                    | (x, ts')  <- px ts
+                    , (y, ts'') <- py ts'])
+```
+
+```
+|-------------------------------| ts
+:---------:|--------------------| ts'
+:    x     :------:|------------| ts''
+:             y   :
+:-----------------:
+      (x, y)
+```
+
+It is useful to make `mult` a binary operation, so we introduce one:
+
+```
+> (<~>) :: Monoidal f => f a -> f b -> f (a, b)
+> px <~> py = mult px py
+```
+
+We derive these useful combinators:
+
+```
+> (<~) :: Monoidal f => f a -> f b -> f a
+> px <~ py = fst <$> (px <~> py)
+```
+
+```
+> (~>) :: Monoidal f => f a -> f b -> f b
+> px ~> py = snd <$> (px <~> py)
+```
+
+Where `fst (x, y) = x`
+      `snd (x, y) = y`
+
+Note that we have this equivalence:
+
+```
+(<~) = (<*)
+(~>) = (*>)
+```
+
+# Alternatives
+
+Now we produce parser that can deal with choice in a grammar.
+
+```
+> class Alternative f where
+>     empty :: f a
+>     (<|>) :: f a -> f a -> f a
+```
+
+Here is the instance for parsers:
+
+```
+instance Alternative Parser where
+    --empty :: Parser a
+    empty = fail -- from before.
+
+    --(<|>) :: Parser a -> Parser a -> Parser a
+    Parser px <|> Parser py = Parser (\ts ->
+                        px ts ++ py ts)
+```
+
+```
+|-----------------------| ts
+:------:|---------------| ts'
+  x, y
+```

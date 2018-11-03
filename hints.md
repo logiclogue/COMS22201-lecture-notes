@@ -54,3 +54,9 @@
 - `(<$)` operator
 - `skip`
 - `(<*>)` operator
+- `(<**>)` operator
+- `(<*)` operator
+- `(*>)` operator
+- `Monoidal` class equivalence to `Applicative`
+- `Alternative`
+- `(<|>)` operator
