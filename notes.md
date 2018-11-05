@@ -1128,5 +1128,5 @@ instance Alternative Parser where
 ```
 |-----------------------| ts
 :------:|---------------| ts'
-  x, y
+ x | y
 ```

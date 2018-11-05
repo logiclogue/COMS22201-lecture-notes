@@ -1158,3 +1158,120 @@ instance Alternative Parser where
 :------:|---------------| ts'
   x, y
 ```
+
+# 05/11/2018
+
+```
+parse px ts ++ parse py ts = parse (px <|> py) ts
+```
+
+Sometimes we want to extend `<|>` to many input parsers.
+
+```
+> choice :: [Parser a] -> Parser a
+> choice pxs = foldr (<|>) empty pxs
+```
+
+We can define a combinator that appends the result of a parse onto others:
+
+```
+> (<:>) :: Parser a -> Parser [a] -> Parser [a]
+> px <:> pxs = (:) <$> px <*> pxs
+```
+
+To understand this, first recall that most parser combinators are
+left-associative:
+
+```
+(:) <$> px <*> pxs        | Note:
+=                         | (<$>) :: (a -> b) ->
+((:) <$> px) <*> pxs      |         f a -> f b
+:--- a -> [a] -> [a]      | (<*>) :: f (a -> b)
+:        -- Parser a      |      -> f a -> f b
+:  = (a -> [a]) -> [a]    |
+:---------:      : :      |
+Parser ([a] -> [a]):      |
+:                :-:
+:               Parser [a]
+:-----------------:
+    Parser [a]
+```
+
+Now we are ready to define combinators that correspond to `+` and `*` from BNF:
+
+```
+e+ is written some e
+e* is written many e
+```
+
+```
+> some :: Parser a -> Parser [a]
+> some px = px <:> many px
+```
+
+This parsers one `px` and appends it to the result of `many px`.
+
+```
+> many :: Parser a -> Parser [a]
+> many px = some px <|> empty
+```
+
+# Monadic Parsing
+
+Sometimes we want the control flow of a parser to depend on what was parsed.
+
+Suppose we have `px :: Parser a`, we can define a function `f :: a -> Parser b`.
+The function `f` inspects the value `x` which came from `px`, and produces a new
+parser accordingly. The result should be a parser of type `Parser b`.
+
+```
+> instance Monad Parser where
+>     --return :: a -> Parser a
+>     return = pure -- from applicative
+>     --(>>=) :: Parser a -> (a -> Parser b) -> Parser b
+>     Parser px >>= f = Parser (\ts ->
+>             concat [parse (f x) ts'
+>                         | (x, ts') <- px ts])
+
+|----------------------------| ts
+:-------:|-------------------| ts'
+    x    :-------------------:
+                  f x
+```
+
+To use this combinator we combine a parser with a function:
+
+The satisfy parser takes in a function that is a predicate on `Char`s and
+returns the parse value if it satisfies the predicate:
+
+```
+> satisfy :: (Char -> Bool) -> Parser Char
+> satisfy p = item >>= \t -> if p t
+>                             then pure t
+>                             else empty
+```
+
+This is perhaps the most useful combinator. Rather than the monadic definition,
+we can write one directly:
+
+```
+> satisfy :: (Char -> Bool) -> Parser Char
+> satisfy p = Parser (\ts -> case ts of
+>                 []      -> []
+>                 (t:ts') -> [(t, ts') | p t])
+                             ----------------
+                 this is equivalent to:
+                    if p t then [(t, ts')]
+                           else []
+```
+
+We can now parse a single character as follows:
+
+```
+> char :: Char -> Parser Char
+> char c = satisfy (c ==)
+     or in other words:
+> char c = satisfy (\c' -> c == c')
+```
+
+Example: `parse (char 'x') "xyz" = [('x', "yz")]`
