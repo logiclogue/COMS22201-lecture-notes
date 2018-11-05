@@ -60,3 +60,10 @@
 - `Monoidal` class equivalence to `Applicative`
 - `Alternative`
 - `(<|>)` operator
+- `choice`
+- `(<:>)`
+- `some`
+- `many`
+- `Monad` instance for a parser
+- `satisfy`
+- `char`
