@@ -67,3 +67,5 @@
 - `Monad` instance for a parser
 - `satisfy`
 - `char`
+
+- Paull's algorithm
