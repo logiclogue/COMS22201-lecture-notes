@@ -1354,3 +1354,148 @@ end:
 ```
    parse (expr <* eof) "(3+2)*45"
 ```
+
+# Chain for Left-Recursion
+
+The problem with ambiguous grammars that are left recursive can be resolved with
+Paull's algorithm.
+
+```
+<expr> ::= <number> | <expr> "+" <expr>
+```
+
+However, without applying Paull's algorithm, we have a nice datatype:
+
+```
+> data Expr = Num Int | Add Expr Expr
+```
+
+We can decide to use `chainl1` to parse into this data structure from the
+original grammar, assuming that "+" is left associative. (`chainr1`, exists if
+we want it to be right associative)
+
+Essentially, we have this combinator:
+
+```
+> chainl1 :: Parser a -> Parser (a -> a -> a) -> Parser a
+```
+
+This allows us to write a parser of the form:
+
+```
+> expr :: Parser Expr
+> expr = chainl1 number add where
+
+> add :: Parser (Expr -> Expr -> Expr)
+> add = Add <$ tok "+"
+```
+
+# The Free Monad AKA Abstract Syntax
+
+Suppose we are interested in giving a semantics to a language for addition. The
+syntax for this language could look like the following:
+
+```
+x + y
+```
+
+This corresponds to a syntax tree:
+
+```
+           ---------
+           |   + op|
+           ---------
+              / \
+            /     \
+           x (var) y (var)
+```
+
+For a more complex example:
+
+```
+(x + y) + z
+
+           ---------
+           |   + op|
+           ---------
+              / \
+            /     \
+                  z (var)
+       ---------
+       |   + op|
+       ---------
+          / \
+        /     \
+       x (var) y (var)
+```
+
+We want to give the shape of "+" nodes by using a signature functor.
+
+```
+> data AddF k = AddF k k
+```
+
+In Haskell we can also write:
+
+```
+> data AddF k = k :+ k
+```
+
+The provision of variables is left to the free monad. The Free monad `Free f a`
+provides syntax trees whose nodes are shaped by `f`, and whose variables come
+from the type `a`.
+
+```
+> data Free f a = Var a
+>               | Op (f (Free f a))
+```
+
+It is worth comparing this to the definition of `Fix`:
+
+```
+> data Fix f = In (f (Fix f))
+```
+
+The trees to the left can be expressed with the following values of type `Free
+AddF String`.
+
+```
+Op (AddF (Var "x") (Var "y"))
+Op (AddF (Op (AddF (Var "x") (Var "y"))) (Var "z"))
+```
+
+To interpret these free trees, we work in two stages:
+
+1. Change variables into a value - Generator
+2. Evaluate the operations       - Algebra
+
+In pictures, we do this:
+
+```
+           ---------      ---------                
+           |   + op| gen  |   + op| alg       +    = 10
+           --------- ~~~> --------- ~~~~>     ^    
+              / \            / \             / \
+            /     \        /     \         /     \
+            x     y        3     7         3     7
+```
+
+The first stage involves replacing variable with their corresponding numbers.
+This is achieved by defining `Free f` to be a `Functor`.
+
+This is only possible if `f` is a `Functor` too.
+
+```
+> instance Functor f => Functor (Free f) where
+>     --fmap :: (a -> b) -> Free f a -> Free f b
+>     fmap f (Var x) = Var (f x)
+>     fmap f (Op op) = Op (fmap (fmap f) op)
+                 -- f (Free f a)
+                                
+               f (Free f a)
+                     |     
+                     |   fmap (fmap f)
+                     |         ---- Free f a -> Free f b
+                     V   ---- f (Free f a) -> f (Free f b)
+               f (Free f b)
+```

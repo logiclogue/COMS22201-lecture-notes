@@ -69,3 +69,10 @@
 - `char`
 
 - Paull's algorithm
+
+- `chainl1`
+
+# The Free Monad
+
+- `Free`
+- `Functor` instance for `Free f`
