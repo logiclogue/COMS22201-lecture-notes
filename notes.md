@@ -1469,15 +1469,15 @@ To interpret these free trees, we work in two stages:
 1. Change variables into a value - Generator
 2. Evaluate the operations       - Algebra
 
-In pictures, we do this:
+In pictures, we do this to interpret a tree:
 
 ```
-           ---------      ---------                
-           |   + op| gen  |   + op| alg       +    = 10
+           ---------      ---------
+           |   + op| env  |   + op| alg       +    = 10
            --------- ~~~> --------- ~~~~>     ^    
-              / \            / \             / \
+              / \    (1)     / \    (2)      / \
             /     \        /     \         /     \
-            x     y        3     7         3     7
+           /x\   /y\       3     7         3     7
 ```
 
 The first stage involves replacing variable with their corresponding numbers.
