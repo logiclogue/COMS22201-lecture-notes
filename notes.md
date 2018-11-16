@@ -1499,3 +1499,82 @@ This is only possible if `f` is a `Functor` too.
                      V   ---- f (Free f a) -> f (Free f b)
                f (Free f b)
 ```
+
+The second stage extracts semantics by applying an algebra.
+
+This is a recursive function defined as follows overleaf*
+
+*We could use a `cata`, but that is out of the scope of this lecture series.
+
+```
+> extract :: Functor f => (f b -> b) -> Free f b -> b
+> extract alg (Var x) = x
+                   - b
+> extract alg (Op op) = alg (fmap (extract alg) op)
+                  -- f (Free f b)
+          --- f b -> b
+```
+
+Finally, we can combine these two stages to define an evaluation function:
+
+```
+> eval :: Functor f => (f b -> b) -> (a -> b) -> Free f a -> b
+> eval alg env = extract alg . fmap env
+                               -------- (1)
+                 ----------- (2)
+```
+
+In pictures, we can represent an operation with a box, and a variable with a
+triangle, and `alg` will replace boxes, `env` will replace triangles.
+
+First we define an algebra for a functor.
+
+Consider the `AddF` functor from before:
+
+```
+> add :: AddF Int -> Int
+> add (x :+ y) = x + y
+```
+
+We also need a generator from the type of our variables. Variables are often
+given as strings:
+
+```
+> type Var = String
+```
+
+The generator for addition is a function `Var -> Int`.
+
+```
+> env :: Var -> Int
+> env "x" = 3
+> env "y" = 5
+> env _   = 0
+```
+
+Suppose we want to evaluate this tree.
+
+![tree evaluation](res/tree-eval-add-env.jpg)
+
+This is an example of `eval add env`.
+
+A second example is to collect all the variables in an expression as a list. For
+instance in `x + y + z`, we see `["x", "y", "z"]`.
+
+To do this we provide a function `vars`, which is defined using `eval`:
+
+```
+> vars :: Free AddF Var -> [Var]
+> vars = eval alg gen
+>   where
+>     gen :: Var -> [Var]
+>     gen x = [x]
+>     alg :: AddF [Var] -> [Var]
+>     alg (xs :+ ys) = xs ++ ys
+           -- [Var]
+                 -- [Var]
+```
+
+This executes as follows:
+
+![vars tree evaluation](res/vars-tree-evaluation.jpg)

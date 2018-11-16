@@ -76,3 +76,7 @@
 
 - `Free`
 - `Functor` instance for `Free f`
+- `extract`
+- `eval`
+- Environment
+- `vars` example
