@@ -80,3 +80,9 @@
 - `eval`
 - Environment
 - `vars` example
+- `DivF` example
+- Evaluation function for the coproduct of `AddF` and `DivF`
+- Safe division with `Maybe`
+- `Fail` datatype
+- Functor instance of `Fail`
+- Safe division with `Fail`

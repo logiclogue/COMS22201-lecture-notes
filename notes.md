@@ -1578,3 +1578,145 @@ To do this we provide a function `vars`, which is defined using `eval`:
 This executes as follows:
 
 ![vars tree evaluation](res/vars-tree-evaluation.jpg)
+
+Suppose we want to add an operation to our language that performs division:
+
+```
+> data DivF k = DivF k k
+```
+
+If we want to provide a semantics that collects all the variables, we must
+provide an algebra:
+
+```
+> divVars :: DivF [Var] -> [Var]
+> divVars (DivF xs ys) = xs ++ ys
+                -- [Var]
+                   -- [Var]
+```
+
+If we want a language with both addition and division, we need to take the
+coproduct of `AddF` and `DivF`.
+
+This means expressions of the form `AddF :+: DivF`.
+
+For example, we can work with `Div` alone:
+
+```
+> evalDiv :: Free Div Var -> [Var]
+> evalDiv = eval alg gen where
+>
+>     gen :: Var -> [Var]
+>     gen x = [x]
+>
+>     alg :: DivF [Var] -> [Var]
+>     alg (DivF xs ys) = xs ++ ys
+```
+
+Dealing with `AddF` and `DivF` requires this:
+
+```
+> vars :: Free (AddF :+: DivF) Var -> [Var]
+> vars = eval alg gen where
+>     gen x = [x]
+>     alg :: (AddF :+: DivF) [Var] -> [Var]
+>     alg (L (AddF xs ys)) = xs ++ ys
+>     alg (R (DivF xs ys)) = xs ++ ys
+```
+
+When we try to evaluate this language naively, we encounter a problem:
+
+```
+> expr :: Free (AddF :+: DivF) Var -> Double
+> expr = eval alg gn where
+>
+>     gen :: Var -> Double
+>     gen = env -- this function knows how to assign values to variables
+>
+>     alg :: (AddF :+: DivF) Double -> Double
+>     alg (L (AddF x y)) = x + y
+                -- Double
+                  -- Double
+>     alg (R (DivF x y)) = x / y
+                -- Double
+                  -- Double
+```
+
+The sad truth is that this function is broken! To see why, consider
+
+```
+alg (R (DivF x 0))
+```
+
+this will fail!
+
+To fix this problem we must be up-front about the fact that an error can happen.
+The basic way to do this is to interpret into a `Maybe` datatype.
+
+```
+> expr :: Free (AddF :+: DivF) Var -> Maybe Double
+> expr = eval alg gen where
+>
+>     gen = env
+>
+>     alg (L (AddF x y)) = mAdd x y
+                   --- Maybe Double
+>     alg (R (DivF x y)) = mDiv x y
+```
+
+We must now define `mAdd` and `mDiv`:
+
+```
+> mAdd :: Maybe Double -> Maybe Double -> Maybe Double
+> mAdd Nothing  y        = Nothing
+> mAdd x        Nothing  = Nothing
+> mAdd (Just x) (Just y) = Just (x + y)
+```
+
+With division we are sensitive to 0:
+
+```
+> mDiv :: Maybe Double -> Maybe Double -> Maybe Double
+> mDiv (Just x) (Just 0) = Nothing
+> mDiv (Just x) (Just y) = Just (x / y)
+> mDiv mx       my       = Nothing
+```
+
+# Failure
+
+We need to create syntax for failure:
+
+```
+> data Fail k = Fail
+```
+
+The functor instance shows us that computations cannot follow a fail:
+
+```
+> instance Functor Fail where
+>     fmap f Fail = Fail
+```
+
+If we deal with division alone, we have this:
+
+```
+> evalFail :: Free DivF Double -> Free FailF Double
+> evalFail = eval alg gen where
+>
+>     gen :: Double -> Free FailF Double
+>     gen x = Var x
+>
+>     alg :: DivF (Free FailF Double) -> Free (FailF) Double
+>     alg (DivF x y) = ...
+                --- Free FailF Double <- this shows us that we can pattern
+                                         match on a Tree!
+```
+
+The algebra should therefore be:
+
+```
+> alg :: DivF (Free FailF Double) -> Free FailF Double
+> alg (DivF (Var x) (Var 0)) = Op FailF
+> alg (DivF (Var x) (Var y)) = Var (x / y)
+> alg (DivF tl      tr     ) = Op FailF
+```
