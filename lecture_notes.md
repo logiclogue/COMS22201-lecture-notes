@@ -1758,3 +1758,112 @@ The algebra should therefore be:
 > alg (DivF (Var x) (Var y)) = Var (x / y)
 > alg (DivF tl      tr     ) = Op FailF
 ```
+
+# 29/11/2018
+
+# Substitution
+
+Substitution in a language is a very useful feature. For example, consider this:
+
+```
+x + 7
+```
+
+We can evaluate this into a new syntax tree when we have a notion of
+substitution, where we might find `x` to another expression rather than just a
+constant.
+
+```
+e.g x |→ 4 + 5
+```
+
+then we expect the above to become:
+
+```
+(4 + 5) + 7
+```
+
+We can depict this by the following trees:
+
+![Tree diagram](2018-11-29-tree-1.jpg)
+
+Substitution is the act of grafting the tree on the right into the left:
+
+![Tree diagram](2018-11-29-tree-2.jpg)
+
+We will define substitution using code.
+
+Usually an expression e with a variable x is substituted using e' with the
+following syntax.
+
+```
+e [x |→ e']
+-- This corresponds to x + 7
+        -- This is 4 + 5
+```
+
+Sometimes we also write `e [x \ 4 + 5]`
+                     or `e [x + 5 / x]`
+
+For our purposes, a syntax tree is given by a datatype `Free f a`, where `f` is
+the shape of the syntax, and `a` is the type of the variables.
+
+Substitution is defined by `(>>=)` as follows:
+
+```
+(>>=) :: Free f a -> (a -> Free f b) -> Free f b
+         -- Syntax tree   -- Substitution function
+Var x >>= f = f x
+    -- a  -- (a -> Free f b)
+Op op >>= f = Op (fmap (>>= f) op)
+   -- f (Free f a)             -- f(Free f a)
+          -- a -> Free f b       |
+                 |        -- Free f a -> Free f b
+                 |---------------|
+                   f (Free f b)
+```
+
+# Non-determinism
+
+A non-deterministic computation is one that provides the choice between two
+different computations.
+
+For example, `p box q` is the program that gives answers from `p` or `q`.
+
+![Tree diagram](2018-11-29-tree-3.jpg)
+
+Here we use `Or` to represent `box`.
+
+![Tree diagram](2018-11-29-tree-4.jpg)
+
+One interpretation of this tree is as follows:
+
+![Tree diagram](2018-11-29-tree-5.jpg)
+
+In terms of code we first need to express the syntax:
+
+```
+> data Or k = Or k k
+```
+
+We must ensure that this is a functor:
+
+```
+> instance Functor Or where
+>     fmap f (Or x y) = Or (f x) (f y)
+```
+
+With this in place, we can define an evaluation function:
+
+```
+> list :: Free Or a -> [a]
+> list = eval alg gen where
+>
+>     gen :: a -> [a]
+>     gen x = [x]
+>    
+>     alg :: Or [a] -> [a]
+>     alg (Or xs ys) = xs ++ ys
+```
+
+Another interpretation of these trees is to simply return the first result:
