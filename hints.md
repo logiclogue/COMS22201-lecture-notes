@@ -86,3 +86,5 @@
 - `Fail` datatype
 - Functor instance of `Fail`
 - Safe division with `Fail`
+- Substitution
+- Non-determinism with `Or`
