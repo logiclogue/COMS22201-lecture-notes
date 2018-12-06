@@ -2018,3 +2018,98 @@ new state `s'`.
 In the term `k s s`
                -- the state that generates programs
                  -- the state passed on to future programs
+
+# 06/12/2018
+
+# Diagrams of Operations
+
+We have already seen some diagrams. Here are some conventions:
+
+![Diagram](2018-12-06-diagram-1.jpg)
+
+To represent nondeterminism and alternation we have these diagrams:
+
+```
+> data Or k = Or k k
+> data Alt k = Alt (Bool -> k)
+```
+
+![Diagram](2018-12-06-diagram-2.jpg)
+
+We can imagine state `State s = Put s :+: Get s`
+
+```
+> data Put s k = Put s k
+> data Get s k = Get (s -> k)
+```
+
+To draw the operation `Put`, we have the following:
+
+![Diagram](2018-12-06-diagram-3.jpg)
+
+These examples are of `Free (Put Bool) a` syntax trees: since `s = Bool`, we can
+only construct these two `Put` nodes.
+
+We can parameterise s differently, so if we had `s = Int`, then we have a huge
+number of nodes:
+
+![Diagram](2018-12-06-diagram-4.jpg)
+
+The `Get` nodes are a generalisation of `Alt`.
+
+If we consider trees of the form `Free (Get Bool) a` then this is as follows:
+
+![Diagram](2018-12-06-diagram-5.jpg)
+
+With `s = Int`, we have `Free (Get Int) a`:
+
+![Diagram](2018-12-06-diagram-6.jpg)
+
+Note that `Alt` and `Get Bool` are not syntactically very similar: they share
+the same structure. Their differences are exhibited when we provide different
+algebras.
+
+We can compose trees together:
+
+![Diagram](2018-12-06-diagram-7.jpg)
+
+When we gave the algebra for `State s` when the carrier was `s -> (a, s)`, we
+were storing the state s in output, and reacting to s as input.
+
+Consider `s = Bool`:
+
+![Diagram](2018-12-06-diagram-8.jpg)
+
+```
+                      -- this is selecting the child
+alg (Get k) = \s -> k s s
+                        -- this is passing s onwards
+         -- this is represented by the children in the diagram
+```
+
+These syntax trees all correspond to values of type `Free (State s) a`. They can
+be cumbersome to work with, because we must wrap everything in `Op`.
+
+```
+Op (Put False (Op (Get (\s -> ...))))
+```
+
+We can avoid this by introducing smart constructors for `Put` and `Get`.
+
+```
+> put :: s -> Free (State s) ()
+> put s = Op (Put s (Var ()))
+                    -------- Free (State s) ()
+
+> get :: Free (State s) s
+> get = Op (Get (\s -> Var s))
+                -------- s -> Free (State s) s
+```
+
+With these tools, we can simply substitute:
+
+```
+put False >> get
+```
+
+This produces the tree as above.
